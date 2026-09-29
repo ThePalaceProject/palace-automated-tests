@@ -1,0 +1,14 @@
+appId: org.thepalaceproject.palace
+---
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "org.thepalaceproject.palace:id/splashNotificationsText"
+
+- tapOn:
+    id: "org.thepalaceproject.palace:id/splashNotificationsSkip"
+
+- assertVisible: "Library Account Creation"
+
+- assertVisible: "Palace Bookshelf"

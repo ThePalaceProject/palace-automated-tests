@@ -1,0 +1,4 @@
+appId: org.thepalaceproject.palace
+---
+- launchApp
+- assertVisible: "Palace"
