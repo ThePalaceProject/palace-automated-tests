@@ -33,11 +33,13 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
+      
       - name: Run Playwright tests
-          run: npx playwright test --project=${{ matrix.browser }}
-          env:
-            VLC_USERNAME: ${{ secrets.VLC_USERNAME }}
-            VLC_PASSWORD: ${{ secrets.VLC_PASSWORD }}
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          VLC_USERNAME: ${{ secrets.VLC_USERNAME }}
+          VLC_PASSWORD: ${{ secrets.VLC_PASSWORD }}
+
   
 
       - name: Upload Playwright report
