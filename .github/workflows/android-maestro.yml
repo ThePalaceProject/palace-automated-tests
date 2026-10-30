@@ -1,0 +1,99 @@
+name: Android Maestro Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "BrowserStack APK URL"
+        required: true
+        default: "bs://6a9aa17cda9a75dafd7463438daca96b065f838e"
+
+permissions:
+  contents: read
+
+jobs:
+  android-smoke:
+    name: Android Smoke - BrowserStack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Package Maestro tests
+        run: |
+          mkdir -p /tmp/palace-smoke-suite
+          cp maestro/android/smoke/*.yaml /tmp/palace-smoke-suite/
+          cd /tmp
+          zip -r palace-smoke-suite.zip palace-smoke-suite
+
+      - name: Upload Maestro tests to BrowserStack
+        id: upload
+        env:
+          BS_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BS_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: |
+          RESPONSE=$(curl --fail-with-body -sS \
+            -u "$BS_USERNAME:$BS_ACCESS_KEY" \
+            -X POST \
+            "https://api-cloud.browserstack.com/app-automate/maestro/v2/test-suite" \
+            -F "file=@/tmp/palace-smoke-suite.zip")
+
+          echo "$RESPONSE"
+
+          SUITE_URL=$(echo "$RESPONSE" | jq -r '.test_suite_url')
+
+          if [[ -z "$SUITE_URL" || "$SUITE_URL" == "null" ]]; then
+            echo "Failed to retrieve test suite URL"
+            exit 1
+          fi
+
+          echo "suite_url=$SUITE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Start BrowserStack Maestro build
+        id: build
+        env:
+          BS_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BS_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          APP_URL: ${{ inputs.app_url }}
+          SUITE_URL: ${{ steps.upload.outputs.suite_url }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg app "$APP_URL" \
+            --arg suite "$SUITE_URL" \
+            '{
+              app: $app,
+              testSuite: $suite,
+              project: "Palace Android Automation",
+              build: "Android Maestro - GitHub Actions",
+              devices: ["Google Pixel 7-13.0"],
+              deviceLogs: true
+            }')
+
+          RESPONSE=$(curl --fail-with-body -sS \
+            -u "$BS_USERNAME:$BS_ACCESS_KEY" \
+            -X POST \
+            "https://api-cloud.browserstack.com/app-automate/maestro/v2/android/build" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          echo "$RESPONSE"
+
+          BUILD_ID=$(echo "$RESPONSE" | jq -r '.build_id')
+
+          if [[ -z "$BUILD_ID" || "$BUILD_ID" == "null" ]]; then
+            echo "Failed to retrieve BrowserStack build ID"
+            exit 1
+          fi
+
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Record BrowserStack build
+        env:
+          BUILD_ID: ${{ steps.build.outputs.build_id }}
+        run: |
+          echo "BrowserStack build submitted: $BUILD_ID"
+          echo "### Android Maestro Smoke Tests" >> "$GITHUB_STEP_SUMMARY"
+          echo "BrowserStack build ID: \`$BUILD_ID\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: Submitted; test result not yet verified." >> "$GITHUB_STEP_SUMMARY"
