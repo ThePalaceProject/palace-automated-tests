@@ -122,7 +122,7 @@ jobs:
 
               echo "Tests passed: $PASSED / $TOTAL"
 
-              if [[ "$STATUS" == "passed" && "$TOTAL" -gt 0 && "$PASSED" -eq "$TOTAL" 2 ]]; then
+              if [[ "$STATUS" == "passed" && "$TOTAL" -eq 2 && "$PASSED" -eq 2 ]]; then
                 echo "All Android Maestro tests passed!"
                 exit 0
               fi
