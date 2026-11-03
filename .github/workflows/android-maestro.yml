@@ -89,14 +89,7 @@ jobs:
 
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Record BrowserStack build
-        env:
-          BUILD_ID: ${{ steps.build.outputs.build_id }}
-        run: |
-          echo "BrowserStack build submitted: $BUILD_ID"
-          echo "### Android Maestro Smoke Tests" >> "$GITHUB_STEP_SUMMARY"
-          echo "BrowserStack build ID: \`$BUILD_ID\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Status: Submitted; test result not yet verified." >> "$GITHUB_STEP_SUMMARY"
+      
       - name: Wait for BrowserStack results
         env:
           BS_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
@@ -121,6 +114,17 @@ jobs:
               PASSED=$(echo "$RESPONSE" | jq '[.devices[].sessions[].testcases.status.passed] | add // 0')
 
               echo "Tests passed: $PASSED / $TOTAL"
+              FAILED=$(echo "$RESPONSE" | jq '[.devices[].sessions[].testcases.status.failed] | add // 0')
+
+              echo "### Android Maestro Smoke Tests" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Metric | Result |" >> "$GITHUB_STEP_SUMMARY"
+              echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Total tests | $TOTAL |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Passed | $PASSED |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Failed | $FAILED |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| BrowserStack build ID | \`$BUILD_ID\` |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Build status | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
 
               if [[ "$STATUS" == "passed" && "$TOTAL" -eq 2 && "$PASSED" -eq 2 ]]; then
                 echo "All Android Maestro tests passed!"
