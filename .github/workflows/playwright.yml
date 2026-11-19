@@ -35,12 +35,35 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      
+      # Repository secrets are not passed to workflows for pull requests
+      # opened from forks. This step fails closed in that case. Do not switch
+      # this workflow to pull_request_target to work around that limitation.
+      - name: Validate web catalog credentials
+        env:
+          CPW_LIBRARY_CARD: ${{ secrets.CPW_LIBRARY_CARD }}
+          CPW_PASSWORD: ${{ secrets.CPW_PASSWORD }}
+        run: |
+          missing=0
+          if [ -z "$CPW_LIBRARY_CARD" ]; then
+            echo "::error::CPW_LIBRARY_CARD is missing or empty."
+            missing=1
+          fi
+          if [ -z "$CPW_PASSWORD" ]; then
+            echo "::error::CPW_PASSWORD is missing or empty."
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Web catalog authentication tests require the CPW_LIBRARY_CARD and CPW_PASSWORD repository secrets. These secrets are unavailable to pull requests opened from forks."
+            exit 1
+          fi
+
       - name: Run Playwright tests
         run: npx playwright test --project=${{ matrix.browser }}
         env:
           VLC_USERNAME: ${{ secrets.VLC_USERNAME }}
           VLC_PASSWORD: ${{ secrets.VLC_PASSWORD }}
+          CPW_LIBRARY_CARD: ${{ secrets.CPW_LIBRARY_CARD }}
+          CPW_PASSWORD: ${{ secrets.CPW_PASSWORD }}
 
   
 
